@@ -64,6 +64,50 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_parse_a_command() {
+        assert!(matches!(
+            parse_a_command("@123"),
+            Command::A{ address } if address == 123,
+        ));
+    }
+
+    #[test]
+    fn test_parse_variable() {
+        assert!(matches!(
+            parse_a_command("@xxx"),
+            Command::Pseudo(PseudoCommand::A { label }) if label == "xxx",
+        ));
+    }
+
+    #[test]
+    fn test_parse_c_command() {
+        match parse_c_command("M-1") {
+            Command::C { comp, dest, jump } => {
+                assert_eq!(dest, None);
+                assert_eq!(comp, "M-1");
+                assert_eq!(jump, None);
+            }
+            _ => panic!(),
+        }
+        match parse_c_command("A=M-1") {
+            Command::C { comp, dest, jump } => {
+                assert_eq!(dest, Some("A".into()));
+                assert_eq!(comp, "M-1");
+                assert_eq!(jump, None);
+            }
+            _ => panic!(),
+        }
+        match parse_c_command("0;JMP") {
+            Command::C { comp, dest, jump } => {
+                assert_eq!(dest, None);
+                assert_eq!(comp, "0");
+                assert_eq!(jump, Some("JMP".into()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
     fn test_parse_l_command() {
         assert!(matches!(
             parse_l_definition("(test)"),

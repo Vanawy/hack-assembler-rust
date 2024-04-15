@@ -11,8 +11,8 @@ pub enum Command {
     /// If dest is empty, the `=` is omitted;
     /// If jump is empty, the `;` is omitted.
     C {
-        comp: String,
         dest: Option<String>,
+        comp: String,
         jump: Option<String>,
     },
     Pseudo(PseudoCommand),
