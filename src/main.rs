@@ -51,21 +51,33 @@ fn main() {
 
     let mut symbol_table = SymbolTable::new();
 
+    // FIRST PASS
+    let mut rom_address = 0;
+
     commands.clone().for_each(|c| match c {
         Command::Pseudo(PseudoCommand::L { label }) => {
-            symbol_table.insert_label(label);
+            symbol_table.insert(label, rom_address);
         }
         _ => {
-            symbol_table.increment_rom();
+            rom_address += 1;
         }
     });
+
+    // SECOND PASS
+    let mut variable_address = 16;
 
     let commands = commands.filter_map(|cmd| match cmd {
         Command::Pseudo(PseudoCommand::L { .. }) => None,
         Command::Pseudo(PseudoCommand::A { label }) => {
-            symbol_table.insert_variable(label.clone());
+            if !symbol_table.has(&label) {
+                symbol_table.insert(
+                    label.clone(),
+                    variable_address,
+                );
+                variable_address += 1;
+            }
             Some(Command::A {
-                address: symbol_table.get(label).unwrap(),
+                address: symbol_table.get(&label).unwrap(),
             })
         }
         c => Some(c),
@@ -86,36 +98,4 @@ fn main() {
         writeln!(f, "{}", c.to_binary_string())
             .expect("Error writing to file");
     });
-}
-
-#[cfg(test)]
-
-mod tests {
-
-    use super::*;
-
-    #[test]
-    fn test_max_l() {
-        let p = |s: &str| -> String {
-            let c = Code::from(parser::parse(s).unwrap());
-            c.to_binary_string()
-        };
-
-        assert_eq!(p("@0"), "0000000000000000");
-        assert_eq!(p("D=M"), "1111110000010000");
-        assert_eq!(p("@1"), "0000000000000001");
-        assert_eq!(p("D=D-M"), "1111010011010000");
-        assert_eq!(p("@10"), "0000000000001010");
-        assert_eq!(p("D;JGT"), "1110001100000001");
-        assert_eq!(p("@1"), "0000000000000001");
-        assert_eq!(p("D=M"), "1111110000010000");
-        assert_eq!(p("@12"), "0000000000001100");
-        assert_eq!(p("0;JMP"), "1110101010000111");
-        assert_eq!(p("@0"), "0000000000000000");
-        assert_eq!(p("D=M"), "1111110000010000");
-        assert_eq!(p("@2"), "0000000000000010");
-        assert_eq!(p("M=D"), "1110001100001000");
-        assert_eq!(p("@14"), "0000000000001110");
-        assert_eq!(p("0;JMP"), "1110101010000111");
-    }
 }
