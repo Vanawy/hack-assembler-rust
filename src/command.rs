@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Command {
     /// A-command: `@value`
     /// Where value is either a non-negative decimal number [AAddress] or a
@@ -18,7 +18,7 @@ pub enum Command {
     Pseudo(PseudoCommand),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PseudoCommand {
     /// A-command (pseudo command): `@label`
     ///
