@@ -13,29 +13,73 @@
 //! exists, it is overridden). The output produced by your assembler must be
 //! identical to the output produced by the supplied assembler.
 
-use std::{env::args, io::Write};
+use std::fs::File;
+use std::io::Write;
+use std::{env::args, fs};
 
 mod code;
 mod command;
 mod parser;
+mod symbol_table;
 
 use code::Code;
-use parser::Parser;
-use std::fs::File;
+
+use crate::command::{Command, PseudoCommand};
+use crate::symbol_table::SymbolTable;
 
 fn main() {
     let input_path = args().nth(1).expect(
         "Input .asm file path expected as first argument",
     );
 
-    println!("Input path: {}", input_path);
+    println!("Input: {}", input_path);
 
-    let parser = Parser::new(&input_path);
+    let input = fs::read_to_string(&input_path)
+        .expect("Can't read input file");
 
-    let codes: Vec<_> = parser.map(Code::from).collect();
+    let lines = input.lines();
+
+    let lines = lines
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty() && !s.starts_with("//"));
+
+    let commands = lines.map(|s| {
+        parser::parse(s)
+            .take()
+            .expect("Invalid string as parse input")
+    });
+
+    let mut symbol_table = SymbolTable::new();
+
+    commands.clone().for_each(|c| match c {
+        Command::Pseudo(PseudoCommand::L { label }) => {
+            symbol_table.insert_label(label);
+        }
+        _ => {
+            symbol_table.increment_rom();
+        }
+    });
+
+    let commands = commands.filter_map(|cmd| match cmd {
+        Command::Pseudo(PseudoCommand::L { .. }) => None,
+        Command::Pseudo(PseudoCommand::A { label }) => {
+            symbol_table.insert_variable(label.clone());
+            Some(Command::A {
+                address: symbol_table.get(label).unwrap(),
+            })
+        }
+        c => Some(c),
+    });
+
+    let codes: Vec<_> = commands.map(Code::from).collect();
+
+    println!("{} commands parsed", codes.len());
 
     let name = input_path.replace(".asm", "") + ".hack";
 
+    println!("Output: {}", name);
+
+    // println!("Symbol table: {:?}", symbol_table);
     let mut f =
         File::create(name).expect("Error opening file");
     codes.iter().for_each(|c| {

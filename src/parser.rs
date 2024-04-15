@@ -1,49 +1,9 @@
-use crate::command::Command;
-use std::fs;
-
-pub struct Parser {
-    lines: Vec<String>,
-    index: usize,
-}
-
-impl Parser {
-    pub fn new(source_path: &String) -> Parser {
-        let input = fs::read_to_string(source_path)
-            .expect("Can't read input file");
-
-        Parser {
-            lines: input
-                .lines()
-                .map(|s| s.trim().to_string())
-                .filter(|s| {
-                    !s.is_empty() && !s.starts_with("//")
-                })
-                .collect(),
-            index: 0,
-        }
-    }
-}
-
-impl Iterator for Parser {
-    type Item = Command;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.lines.len() {
-            return None;
-        }
-        let line = &self.lines[self.index];
-        self.index += 1;
-
-        match parse(line) {
-            Some(c) => Some(c),
-            None => self.next(),
-        }
-    }
-}
+use crate::command::{Command, PseudoCommand};
 
 pub fn parse(line: &str) -> Option<Command> {
     let result = match line.chars().next() {
         Some('@') => Some(parse_a_command(line)),
+        Some('(') => Some(parse_l_definition(line)),
         Some(_) => Some(parse_c_command(line)),
         None => None,
     };
@@ -51,12 +11,13 @@ pub fn parse(line: &str) -> Option<Command> {
 }
 
 fn parse_a_command(line: &str) -> Command {
-    let address: String = line.chars().skip(1).collect();
-    let address: u16 = match address.parse() {
-        Ok(v) => v,
-        Err(_) => todo!(),
-    };
-    Command::A { address }
+    let chars: String = line.chars().skip(1).collect();
+    match chars.parse() {
+        Ok(address) => Command::A { address },
+        Err(_) => Command::Pseudo(PseudoCommand::A {
+            label: chars,
+        }),
+    }
 }
 
 fn parse_c_command(line: &str) -> Command {
@@ -86,4 +47,27 @@ fn parse_c_command(line: &str) -> Command {
     }
 
     Command::C { dest, comp, jump }
+}
+
+fn parse_l_definition(line: &str) -> Command {
+    let label = line
+        .chars()
+        .skip(1)
+        .take_while(|&c| c != ')')
+        .collect();
+
+    Command::Pseudo(PseudoCommand::L { label })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_l_command() {
+        assert!(matches!(
+            parse_l_definition("(test)"),
+            Command::Pseudo(PseudoCommand::L { label }) if label == "test",
+        ));
+    }
 }

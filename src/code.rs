@@ -9,10 +9,12 @@ impl Code {
     pub fn from(command: Command) -> Code {
         let value = match command {
             Command::A { address } => address,
-            Command::L { .. } => todo!(),
             Command::C { .. } => {
                 value_from_c_command(command)
             }
+            Command::Pseudo(_) => panic!(
+                "Pseudo-command cant be converted to code"
+            ),
         };
 
         Code { value }
