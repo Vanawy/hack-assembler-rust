@@ -17,7 +17,7 @@ use std::{env::args, fs};
 
 fn main() {
     let input_path = args().nth(1).expect(
-        "Input .asm file path expected as first argument",
+        "Path to .asm file path expected as first argument",
     );
 
     println!("Input: {}", input_path);
