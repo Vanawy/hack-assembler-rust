@@ -79,7 +79,10 @@ fn add_comp_part(value: &mut u16, comp: String) {
         "D&M" => 0b1_000000,
         "D|M" => 0b1_010101,
         // default
-        _ => panic!("Invalid comp part of C-command"),
+        _ => panic!(
+            "Invalid comp part of C-command: {}",
+            comp
+        ),
     };
 
     *value |= comp << 6;
